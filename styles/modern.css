@@ -1,0 +1,236 @@
+/* Main Container Styles */
+.modern-container {
+    -fx-background-color: #f9fafb;
+    -fx-font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* Menu Bar Styles */
+.modern-menu {
+    -fx-background-color: white;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 1);
+}
+
+.modern-menu .menu {
+    -fx-padding: 4 8;
+}
+
+.modern-menu .menu-item {
+    -fx-padding: 8 16;
+}
+
+.modern-menu .menu-item .label {
+    -fx-font-size: 13px;
+}
+
+.modern-menu .menu-item:hover {
+    -fx-background-color: #f3f4f6;
+}
+
+/* Toolbar Styles */
+.toolbar {
+    -fx-background-color: white;
+    -fx-padding: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 5, 0, 0, 1);
+    -fx-border-color: #e5e7eb;
+    -fx-border-width: 0 0 1 0;
+}
+
+.tool-button {
+    -fx-background-color: transparent;
+    -fx-padding: 6 10;
+    -fx-cursor: hand;
+}
+
+.tool-button:hover {
+    -fx-background-color: #f3f4f6;
+}
+
+.tool-button .ikonli-font-icon {
+    -fx-icon-size: 16;
+    -fx-icon-color: #374151;
+}
+
+/* Separator Style */
+.separator:vertical .line {
+    -fx-background-color: #e5e7eb;
+    -fx-padding: 0 1;
+}
+
+/* ComboBox Styles */
+.combo-box {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 4;
+    -fx-padding: 2;
+}
+
+.combo-box:hover {
+    -fx-border-color: #9ca3af;
+}
+
+/* Action Buttons */
+.action-button {
+    -fx-padding: 8 16;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.action-button .button-label {
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+}
+
+.action-button .ikonli-font-icon {
+    -fx-icon-color: white;
+    -fx-icon-size: 14;
+}
+
+.encrypt-button {
+    -fx-background-color: #3b82f6;
+}
+
+.encrypt-button:hover {
+    -fx-background-color: #2563eb;
+}
+
+.decrypt-button {
+    -fx-background-color: #10b981;
+}
+
+.decrypt-button:hover {
+    -fx-background-color: #059669;
+}
+
+/* Status Container */
+.status-container {
+    -fx-padding: 10;
+    -fx-background-color: white;
+    -fx-background-radius: 4;
+    -fx-border-color: #e5e7eb;
+    -fx-border-radius: 4;
+}
+
+.status-container .label {
+    -fx-text-fill: #374151;
+}
+
+.status-container .ikonli-font-icon {
+    -fx-icon-color: #374151;
+    -fx-icon-size: 14;
+}
+
+/* File Table Styles */
+.file-table {
+    -fx-background-color: white;
+    -fx-background-radius: 4;
+    -fx-border-color: #e5e7eb;
+    -fx-border-radius: 4;
+}
+
+.file-table .column-header {
+    -fx-background-color: #f9fafb;
+    -fx-padding: 8;
+    -fx-border-color: #e5e7eb;
+    -fx-border-width: 0 0 1 0;
+}
+
+.file-table .column-header .label {
+    -fx-font-weight: bold;
+    -fx-text-fill: #374151;
+}
+
+.file-table .table-row-cell {
+    -fx-background-color: white;
+    -fx-border-color: #e5e7eb;
+    -fx-border-width: 0 0 1 0;
+}
+
+.file-table .table-row-cell:hover {
+    -fx-background-color: #f9fafb;
+}
+
+.file-table .table-row-cell:selected {
+    -fx-background-color: #e5e7eb;
+}
+
+/* Progress Bar Styles */
+.progress-container {
+    -fx-padding: 10 0;
+}
+
+.progress-bar {
+    -fx-pref-height: 8;
+}
+
+.progress-bar .bar {
+    -fx-background-color: #3b82f6;
+    -fx-background-radius: 4;
+}
+
+.progress-bar .track {
+    -fx-background-color: #e5e7eb;
+    -fx-background-radius: 4;
+}
+
+.progress-container .label {
+    -fx-text-fill: #6b7280;
+    -fx-font-size: 12px;
+}
+
+/* Status Bar */
+.status-bar {
+    -fx-background-color: white;
+    -fx-border-color: #e5e7eb;
+    -fx-border-width: 1 0 0 0;
+}
+
+.status-bar .label {
+    -fx-text-fill: #6b7280;
+    -fx-font-size: 12px;
+}
+
+/* Dialog Styles */
+.dialog-pane {
+    -fx-background-color: white;
+}
+
+.dialog-pane .header-panel {
+    -fx-background-color: #f9fafb;
+    -fx-padding: 16;
+}
+
+.dialog-pane .content {
+    -fx-padding: 16;
+}
+
+/* Text Field Styles */
+.text-field {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 4;
+    -fx-padding: 6;
+}
+
+.text-field:focused {
+    -fx-border-color: #3b82f6;
+}
+
+/* Password Field Styles */
+.password-field {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 4;
+    -fx-padding: 6;
+}
+
+.password-field:focused {
+    -fx-border-color: #3b82f6;
+}
+
+/* Tooltip Styles */
+.tooltip {
+    -fx-background-color: #374151;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-padding: 6 10;
+}
