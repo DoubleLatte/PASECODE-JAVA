@@ -1,25 +1,31 @@
 # PASSCODE-JAVA
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Java](https://img.shields.io/badge/Java-11%2B-blue)](https://www.oracle.com/java/)
-[![JavaFX](https://img.shields.io/badge/JavaFX-Latest-green)](https://openjfx.io/)
+![Java](https://img.shields.io/badge/Java-17+-blue)
+![JavaFX](https://img.shields.io/badge/JavaFX-17+-green)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
- 파일 암호화 시스템
+**파일 암호화 시스템**은 AES-256 암호화를 사용하여 파일을 안전하게 암호화하고 복호화할 수 있는 JavaFX 기반 데스크톱 애플리케이션입니다. 사용자는 직관적인 UI를 통해 파일을 선택하고, 키를 생성하거나 로드하여 암호화 작업을 수행할 수 있습니다. 또한 실시간 메모리 모니터링 기능을 제공하여 시스템 자원 사용 상태를 확인할 수 있습니다.
 
-## Features
+## 주요 기능
 
-- 직관적인 드래그 앤 드롭 인터페이스
-- AES-256 암호화 알고리즘 사용
-- 유연한 청크 크기 설정 (1MB ~ 1GB)
-- 실시간 진행 상황 모니터링
-- 비밀번호 보호 키 파일 시스템
-- 모던한 디자인의 UI/UX
+- **파일 암호화 및 복호화**: AES-256 CBC 모드와 PKCS5Padding을 사용하여 파일을 암호화하고 복호화합니다.
+- **키 관리**: 비밀번호 기반으로 키를 생성하고, 바이너리 파일로 저장하거나 로드할 수 있습니다.
+- **청크 단위 처리**: 대용량 파일을 청크 단위로 처리하여 효율성을 높였습니다.
+- **드래그 앤 드롭**: 파일을 테이블에 드래그하여 쉽게 추가할 수 있습니다.
+- **실시간 모니터링**: 메모리 사용량(사용/최대/여유)을 5초마다 하단에 표시합니다.
+- **안전 삭제**: 원본 파일을 무작위 데이터로 덮어쓴 후 삭제하여 복구 불가능하게 합니다.
 
-## Requirements
+## 설치 방법
 
-| Component | Specification |
-|-----------|--------------|
-| Java      | 11 or higher |
-| Memory    | 4GB RAM      |
+### 요구 사항
+- **Java**: JDK 17 이상 (Java 21에서도 호환 가능)
+- **JavaFX**: JavaFX SDK 17 이상
+- **의존성**: `org.kordamp.ikonli:ikonli-javafx` (아이콘 사용
+## 요구 사항
+
+| 구성 요소 | 사양                     |
+|-----------|--------------------------|
+| Java      | 17 이상                 |
+| 메모리    | 4GB RAM                 |
 | OS        | Windows 10/11, macOS 10.14+, Linux |
-| Storage   | 100MB        |
+| 저장 공간 | 100MB                   |
