@@ -19,7 +19,7 @@ public class ModernEncryptionApp extends Application {
         Scene scene = new Scene(root);
         scene.getStylesheets().add(getClass().getResource("/styles/modern.css").toExternalForm());
 
-        primaryStage.setTitle("파일 암호화 시스템");
+        primaryStage.setTitle("PASSCODE");
         primaryStage.setScene(scene);
         primaryStage.show();
     }

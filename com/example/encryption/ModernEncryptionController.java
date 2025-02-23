@@ -166,8 +166,14 @@ public class ModernEncryptionController {
         dialog.showAndWait().ifPresent(password -> {
             try {
                 FileChooser keyChooser = new FileChooser();
-                keyChooser.setTitle("키 파일 저장");
-                File keyFile = keyChooser.showSaveDialog(null);
+                keyChooser.setTitle("키 파일 저장"); // 대화상자 제목
+                keyChooser.setInitialFileName("mykey.key"); // 기본 파일명 제안
+                keyChooser.setInitialDirectory(new File(System.getProperty("user.home"))); // 초기 경로를 홈 디렉토리로
+                keyChooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter("Encryption Key (*.key)", "*.key") // 확장자 필터
+                );
+
+                File keyFile = keyChooser.showSaveDialog(fileTable.getScene().getWindow());열기
 
                 if (keyFile != null) {
                     efs.generateKey(keyFile.getPath(), password);
