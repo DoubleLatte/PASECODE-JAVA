@@ -1,10 +1,10 @@
-/* Main Container Styles */
+/* 메인 컨테이너 스타일 */
 .modern-container {
     -fx-background-color: #f9fafb;
     -fx-font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-/* Menu Bar Styles */
+/* 메뉴바 스타일 */
 .modern-menu {
     -fx-background-color: white;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 1);
@@ -26,7 +26,7 @@
     -fx-background-color: #f3f4f6;
 }
 
-/* Toolbar Styles */
+/* 툴바 스타일 */
 .toolbar {
     -fx-background-color: white;
     -fx-padding: 8;
@@ -50,13 +50,13 @@
     -fx-icon-color: #374151;
 }
 
-/* Separator Style */
+/* 구분선 스타일 */
 .separator:vertical .line {
     -fx-background-color: #e5e7eb;
     -fx-padding: 0 1;
 }
 
-/* ComboBox Styles */
+/* 콤보박스 스타일 */
 .combo-box {
     -fx-background-color: white;
     -fx-border-color: #d1d5db;
@@ -68,7 +68,7 @@
     -fx-border-color: #9ca3af;
 }
 
-/* Action Buttons */
+/* 액션 버튼 스타일 */
 .action-button {
     -fx-padding: 8 16;
     -fx-background-radius: 4;
@@ -101,7 +101,7 @@
     -fx-background-color: #059669;
 }
 
-/* Status Container */
+/* 상태 컨테이너 스타일 */
 .status-container {
     -fx-padding: 10;
     -fx-background-color: white;
@@ -119,7 +119,7 @@
     -fx-icon-size: 14;
 }
 
-/* File Table Styles */
+/* 파일 테이블 스타일 */
 .file-table {
     -fx-background-color: white;
     -fx-background-radius: 4;
@@ -153,7 +153,7 @@
     -fx-background-color: #e5e7eb;
 }
 
-/* Progress Bar Styles */
+/* 진행 바 스타일 */
 .progress-container {
     -fx-padding: 10 0;
 }
@@ -177,7 +177,7 @@
     -fx-font-size: 12px;
 }
 
-/* Status Bar */
+/* 상태 바 스타일 */
 .status-bar {
     -fx-background-color: white;
     -fx-border-color: #e5e7eb;
@@ -189,7 +189,12 @@
     -fx-font-size: 12px;
 }
 
-/* Dialog Styles */
+.status-bar #memoryLabel {
+    -fx-text-fill: #374151;
+    -fx-font-weight: bold;
+}
+
+/* 다이얼로그 스타일 */
 .dialog-pane {
     -fx-background-color: white;
 }
@@ -203,7 +208,7 @@
     -fx-padding: 16;
 }
 
-/* Text Field Styles */
+/* 텍스트 필드 스타일 */
 .text-field {
     -fx-background-color: white;
     -fx-border-color: #d1d5db;
@@ -215,7 +220,7 @@
     -fx-border-color: #3b82f6;
 }
 
-/* Password Field Styles */
+/* 비밀번호 필드 스타일 */
 .password-field {
     -fx-background-color: white;
     -fx-border-color: #d1d5db;
@@ -227,7 +232,7 @@
     -fx-border-color: #3b82f6;
 }
 
-/* Tooltip Styles */
+/* 툴팁 스타일 */
 .tooltip {
     -fx-background-color: #374151;
     -fx-text-fill: white;

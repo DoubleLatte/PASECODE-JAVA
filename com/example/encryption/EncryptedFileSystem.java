@@ -12,14 +12,14 @@ import java.security.spec.KeySpec;
 
 public class EncryptedFileSystem {
     private SecretKeySpec key;
-    private static final int SALT_LENGTH = 16;
-    private static final int IV_LENGTH = 16;
-    private static final int KEY_LENGTH = 256; // AES-256
-    private static final int ITERATION_COUNT = 100000;
-    private static final String ALGORITHM = "AES/CBC/PKCS5Padding";
+    private static final int SALT_LENGTH = 16; // 솔트 길이
+    private static final int IV_LENGTH = 16;   // 초기화 벡터 길이
+    private static final int KEY_LENGTH = 256; // AES-256 키 길이
+    private static final int ITERATION_COUNT = 100000; // 반복 횟수
+    private static final String ALGORITHM = "AES/CBC/PKCS5Padding"; // 암호화 알고리즘
 
     public EncryptedFileSystem() {
-        this.key = null;
+        this.key = null; // 초기 키는 null
     }
 
     // 키 생성: 비밀번호로 AES-256 키를 생성하고 바이너리 형식으로 저장
@@ -34,7 +34,7 @@ public class EncryptedFileSystem {
         byte[] keyBytes = factory.generateSecret(spec).getEncoded();
         this.key = new SecretKeySpec(keyBytes, "AES");
 
-        // 키와 솔트를 바이너리 파일로 저장 (Notepad로 열리지 않음)
+        // 키와 솔트를 바이너리 파일로 저장
         try (FileOutputStream fos = new FileOutputStream(keyPath);
              DataOutputStream dos = new DataOutputStream(fos)) {
             dos.writeInt(SALT_LENGTH); // 솔트 길이 기록
@@ -50,7 +50,7 @@ public class EncryptedFileSystem {
              DataInputStream dis = new DataInputStream(fis)) {
             int saltLength = dis.readInt();
             if (saltLength != SALT_LENGTH) {
-                throw new Exception("Invalid key file format");
+                throw new Exception("잘못된 키 파일 형식");
             }
             byte[] salt = new byte[saltLength];
             dis.readFully(salt);
@@ -65,7 +65,7 @@ public class EncryptedFileSystem {
             byte[] generatedKey = factory.generateSecret(spec).getEncoded();
 
             if (!java.util.Arrays.equals(generatedKey, storedKey)) {
-                throw new Exception("Incorrect password");
+                throw new Exception("잘못된 비밀번호");
             }
             this.key = new SecretKeySpec(generatedKey, "AES");
         }
@@ -74,7 +74,7 @@ public class EncryptedFileSystem {
     // 파일 암호화: AES-256으로 청크 단위 암호화
     public void encryptFile(String filePath, int chunkSize) throws Exception {
         if (this.key == null) {
-            throw new Exception("Key not loaded");
+            throw new Exception("키가 로드되지 않음");
         }
 
         String encryptedFilePath = filePath + ".lock";
@@ -115,7 +115,7 @@ public class EncryptedFileSystem {
     // 파일 복호화: 청크 단위로 자동 감지 후 복호화
     public void decryptFile(String encryptedFilePath) throws Exception {
         if (this.key == null) {
-            throw new Exception("Key not loaded");
+            throw new Exception("키가 로드되지 않음");
         }
 
         String originalPath = encryptedFilePath.substring(0, encryptedFilePath.length() - 5);
@@ -125,7 +125,7 @@ public class EncryptedFileSystem {
              FileOutputStream fos = new FileOutputStream(originalPath)) {
 
             // 헤더 읽기
-            int chunkSize = dis.readInt(); // 원본 청크 크기 (참고용으로만 사용)
+            int chunkSize = dis.readInt();
             byte[] iv = new byte[IV_LENGTH];
             dis.readFully(iv);
 
@@ -133,7 +133,7 @@ public class EncryptedFileSystem {
             cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(iv));
 
             while (dis.available() > 0) {
-                int encryptedChunkLength = dis.readInt(); // 암호화된 청크 길이
+                int encryptedChunkLength = dis.readInt();
                 byte[] encryptedChunk = new byte[encryptedChunkLength];
                 dis.readFully(encryptedChunk);
 

@@ -1,5 +1,6 @@
 package com.example.encryption;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -7,333 +8,356 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.concurrent.Task;
 import java.io.File;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.input.TransferMode;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 public class ModernEncryptionController {
-    // FXML 파일에서 연결된 UI 요소들
-    @FXML private TableView<FileItem> fileTable;      // 파일 목록을 표시하는 테이블
-    @FXML private ComboBox<String> chunkSizeCombo;    // 청크 크기 선택 드롭다운
-    @FXML private ProgressBar progressBar;            // 작업 진행률을 표시하는 프로그레스 바
-    @FXML private Label progressLabel;                // 진행 상태 메시지 레이블
-    @FXML private Label statusLabel;                  // 현재 상태를 표시하는 레이블
-    @FXML private Button encryptButton;               // 암호화 버튼
-    @FXML private Button decryptButton;               // 복호화 버튼
-    
-    private EncryptedFileSystem efs;                  // 암호화 시스템 객체
-    private File currentDirectory;                    // 현재 선택된 디렉토리
-    private ObservableList<FileItem> fileItems;       // 테이블에 표시될 파일 리스트
-    
-    // 컨트롤러 초기화 메서드
+    @FXML private TableView<FileItem> fileTable; // 파일 목록 테이블
+    @FXML private ComboBox<String> chunkSizeCombo; // 청크 크기 선택 드롭다운
+    @FXML private ProgressBar progressBar; // 진행률 표시 바
+    @FXML private Label progressLabel; // 진행 상태 메시지
+    @FXML private Label statusLabel; // 현재 상태 표시
+    @FXML private Button encryptButton; // 암호화 버튼
+    @FXML private Button decryptButton; // 복호화 버튼
+    @FXML private Label memoryLabel; // 메모리 사용량 표시
+
+    private EncryptedFileSystem efs;
+    private File currentDirectory;
+    private ObservableList<FileItem> fileItems;
+    private ScheduledExecutorService executorService;
+
     @FXML
     public void initialize() {
-        efs = new EncryptedFileSystem();              // 암호화 시스템 객체 생성
-        fileItems = FXCollections.observableArrayList();  // 관찰 가능한 파일 리스트 초기화
-        
-        setupUI();           // UI 요소 초기화
-        setupTableColumns(); // 테이블 열 설정
-        setupChunkSizeCombo(); // 청크 크기 선택 설정
-        setupDragAndDrop();   // 드래그 앤 드롭 기능 설정
+        efs = new EncryptedFileSystem();
+        fileItems = FXCollections.observableArrayList();
+
+        setupUI();
+        setupTableColumns();
+        setupChunkSizeCombo();
+        setupDragAndDrop();
+        setupMemoryMonitoring();
     }
-    
-    // UI 요소를 초기화하는 메서드
+
+    // UI 초기화
     private void setupUI() {
-        fileTable.setItems(fileItems);                // 테이블에 파일 리스트 연결
-        encryptButton.setGraphic(new FontIcon("fas-lock"));   // 암호화 버튼에 자물쇠 아이콘 추가
-        decryptButton.setGraphic(new FontIcon("fas-unlock")); // 복호화 버튼에 열린 자물쇠 아이콘 추가
-        progressBar.setProgress(0);                   // 진행 바 초기값 0으로 설정
-        progressLabel.setText("Ready");               // 진행 상태 레이블 초기값 설정
+        fileTable.setItems(fileItems);
+        encryptButton.setGraphic(new FontIcon("fas-lock"));
+        decryptButton.setGraphic(new FontIcon("fas-unlock"));
+        progressBar.setProgress(0);
+        progressLabel.setText("준비");
+        memoryLabel.setText("메모리: 초기화 중...");
     }
-    
-    // 테이블 열을 설정하는 메서드
+
+    // 테이블 열 설정
     private void setupTableColumns() {
-        TableColumn<FileItem, String> nameCol = new TableColumn<>("Name"); // 파일명 열
+        TableColumn<FileItem, String> nameCol = new TableColumn<>("이름");
         nameCol.setCellValueFactory(data -> data.getValue().nameProperty());
-        
-        TableColumn<FileItem, String> typeCol = new TableColumn<>("Type"); // 파일 유형 열
+
+        TableColumn<FileItem, String> typeCol = new TableColumn<>("유형");
         typeCol.setCellValueFactory(data -> data.getValue().typeProperty());
-        
-        TableColumn<FileItem, String> sizeCol = new TableColumn<>("Size"); // 파일 크기 열
+
+        TableColumn<FileItem, String> sizeCol = new TableColumn<>("크기");
         sizeCol.setCellValueFactory(data -> data.getValue().sizeProperty());
-        
-        TableColumn<FileItem, String> statusCol = new TableColumn<>("Status"); // 상태 열
+
+        TableColumn<FileItem, String> statusCol = new TableColumn<>("상태");
         statusCol.setCellValueFactory(data -> data.getValue().statusProperty());
-        
-        fileTable.getColumns().addAll(nameCol, typeCol, sizeCol, statusCol); // 열 추가
+
+        fileTable.getColumns().addAll(nameCol, typeCol, sizeCol, statusCol);
     }
-    
-    // 청크 크기 선택 드롭다운 설정
+
+    // 청크 크기 드롭다운 설정
     private void setupChunkSizeCombo() {
         chunkSizeCombo.getItems().addAll(
             "1 MB", "16 MB", "32 MB", "64 MB",
             "128 MB", "256 MB", "512 MB", "1 GB"
-        ); // 선택 가능한 청크 크기 목록 추가
-        chunkSizeCombo.setValue("32 MB");             // 기본값 32MB로 설정
+        );
+        chunkSizeCombo.setValue("32 MB");
     }
-    
-    // 드래그 앤 드롭 기능 설정
+
+    // 드래그 앤 드롭 설정
     private void setupDragAndDrop() {
         fileTable.setOnDragOver(event -> {
             if (event.getDragboard().hasFiles()) {
-                event.acceptTransferModes(TransferMode.COPY); // 파일 드롭 허용
+                event.acceptTransferModes(TransferMode.COPY);
             }
             event.consume();
         });
-        
+
         fileTable.setOnDragDropped(event -> {
-            List<File> files = event.getDragboard().getFiles(); // 드롭된 파일 목록 가져오기
-            handleFileDrop(files);                     // 파일 처리
+            List<File> files = event.getDragboard().getFiles();
+            handleFileDrop(files);
             event.consume();
         });
     }
-    
-    // 폴더 열기 버튼 클릭 시 호출
-    @FXML
-    private void onOpenFolder() {
-        DirectoryChooser chooser = new DirectoryChooser(); // 디렉토리 선택기 생성
-        chooser.setTitle("Select Folder");                 // 제목 설정
-        File directory = chooser.showDialog(null);         // 폴더 선택 대화상자 표시
-        
-        if (directory != null) {
-            currentDirectory = directory;                  // 선택된 디렉토리 저장
-            updateFileList();                             // 파일 리스트 갱신
+
+    // 메모리 모니터링 설정
+    private void setupMemoryMonitoring() {
+        executorService = Executors.newSingleThreadScheduledExecutor();
+        executorService.scheduleAtFixedRate(() -> {
+            Runtime runtime = Runtime.getRuntime();
+            long maxMemory = runtime.maxMemory() / (1024 * 1024);
+            long usedMemory = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024);
+            long freeMemory = runtime.freeMemory() / (1024 * 1024);
+
+            String memoryInfo = String.format("메모리: 사용 %d MB / 최대 %d MB / 여유 %d MB",
+                                              usedMemory, maxMemory, freeMemory);
+
+            Platform.runLater(() -> memoryLabel.setText(memoryInfo));
+        }, 0, 5, TimeUnit.SECONDS); // 5초마다 갱신
+    }
+
+    // 애플리케이션 종료 시 리소스 정리
+    public void shutdown() {
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdown();
         }
     }
-    
-    // 새 키 생성 버튼 클릭 시 호출
+
+    @FXML
+    private void onOpenFolder() {
+        DirectoryChooser chooser = new DirectoryChooser();
+        chooser.setTitle("폴더 선택");
+        File directory = chooser.showDialog(null);
+
+        if (directory != null) {
+            currentDirectory = directory;
+            updateFileList();
+        }
+    }
+
     @FXML
     private void onCreateKey() {
-        Dialog<String> dialog = new Dialog<>();           // 키 생성 다이얼로그 생성
-        dialog.setTitle("Create New Key");                // 제목 설정
-        dialog.setHeaderText("Enter password for new key"); // 헤더 텍스트 설정
-        
-        GridPane grid = new GridPane();                   // 입력 필드 배치를 위한 그리드
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("새 키 생성");
+        dialog.setHeaderText("새 키를 위한 비밀번호 입력");
+
+        GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
-        
-        PasswordField password = new PasswordField();     // 비밀번호 입력 필드
-        PasswordField confirm = new PasswordField();      // 비밀번호 확인 필드
-        
-        grid.add(new Label("Password:"), 0, 0);           // 비밀번호 레이블
-        grid.add(password, 1, 0);                         // 비밀번호 필드
-        grid.add(new Label("Confirm:"), 0, 1);            // 확인 레이블
-        grid.add(confirm, 1, 1);                          // 확인 필드
-        
-        dialog.getDialogPane().setContent(grid);          // 다이얼로그에 그리드 추가
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL); // 버튼 추가
-        
-        dialog.setResultConverter(dialogButton -> {       // 버튼 클릭 결과 처리
+
+        PasswordField password = new PasswordField();
+        PasswordField confirm = new PasswordField();
+
+        grid.add(new Label("비밀번호:"), 0, 0);
+        grid.add(password, 1, 0);
+        grid.add(new Label("확인:"), 0, 1);
+        grid.add(confirm, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        dialog.setResultConverter(dialogButton -> {
             if (dialogButton == ButtonType.OK) {
                 if (password.getText().equals(confirm.getText())) {
-                    return password.getText();            // 비밀번호 일치 시 반환
+                    return password.getText();
                 } else {
-                    showAlert(Alert.AlertType.ERROR, "Error", "Passwords do not match"); // 불일치 알림
+                    showAlert(Alert.AlertType.ERROR, "오류", "비밀번호가 일치하지 않습니다");
                     return null;
                 }
             }
             return null;
         });
-        
-        dialog.showAndWait().ifPresent(password -> {      // 다이얼로그 결과 처리
+
+        dialog.showAndWait().ifPresent(password -> {
             try {
-                FileChooser keyChooser = new FileChooser(); // 키 파일 저장 위치 선택기
-                keyChooser.setTitle("Save Key File");      // 제목 설정
-                File keyFile = keyChooser.showSaveDialog(null); // 저장 위치 선택
-                
+                FileChooser keyChooser = new FileChooser();
+                keyChooser.setTitle("키 파일 저장");
+                File keyFile = keyChooser.showSaveDialog(null);
+
                 if (keyFile != null) {
-                    efs.generateKey(keyFile.getPath(), password); // 키 생성
-                    showAlert(Alert.AlertType.INFORMATION, "Success", "Key created successfully"); // 성공 알림
-                    statusLabel.setText("Key loaded");     // 상태 업데이트
+                    efs.generateKey(keyFile.getPath(), password);
+                    showAlert(Alert.AlertType.INFORMATION, "성공", "키가 성공적으로 생성되었습니다");
+                    statusLabel.setText("키 로드됨");
                 }
             } catch (Exception e) {
-                showAlert(Alert.AlertType.ERROR, "Error", e.getMessage()); // 오류 알림
+                showAlert(Alert.AlertType.ERROR, "오류", e.getMessage());
             }
         });
     }
-    
-    // 키 로드 버튼 클릭 시 호출
+
     @FXML
     private void onLoadKey() {
-        Dialog<String> dialog = new Dialog<>();           // 키 로드 다이얼로그 생성
-        dialog.setTitle("Load Key");                      // 제목 설정
-        dialog.setHeaderText("Enter password for key");   // 헤더 텍스트 설정
-        
-        GridPane grid = new GridPane();                   // 입력 필드 배치를 위한 그리드
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("키 로드");
+        dialog.setHeaderText("키를 위한 비밀번호 입력");
+
+        GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
-        
-        PasswordField password = new PasswordField();     // 비밀번호 입력 필드
-        grid.add(new Label("Password:"), 0, 0);           // 비밀번호 레이블
-        grid.add(password, 1, 0);                         // 비밀번호 필드
-        
-        dialog.getDialogPane().setContent(grid);          // 다이얼로그에 그리드 추가
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL); // 버튼 추가
-        
-        dialog.setResultConverter(dialogButton -> {       // 버튼 클릭 결과 처리
+
+        PasswordField password = new PasswordField();
+        grid.add(new Label("비밀번호:"), 0, 0);
+        grid.add(password, 1, 0);
+
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        dialog.setResultConverter(dialogButton -> {
             if (dialogButton == ButtonType.OK) {
-                return password.getText();                // 비밀번호 반환
+                return password.getText();
             }
             return null;
         });
-        
-        dialog.showAndWait().ifPresent(password -> {      // 다이얼로그 결과 처리
+
+        dialog.showAndWait().ifPresent(password -> {
             try {
-                FileChooser chooser = new FileChooser();  // 키 파일 선택기
-                chooser.setTitle("Select Key File");       // 제목 설정
-                File keyFile = chooser.showOpenDialog(null); // 키 파일 선택
-                
+                FileChooser chooser = new FileChooser();
+                chooser.setTitle("키 파일 선택");
+                File keyFile = chooser.showOpenDialog(null);
+
                 if (keyFile != null) {
-                    efs.loadKey(keyFile.getPath(), password); // 키 로드
-                    showAlert(Alert.AlertType.INFORMATION, "Success", "Key loaded successfully"); // 성공 알림
-                    statusLabel.setText("Key loaded");     // 상태 업데이트
+                    efs.loadKey(keyFile.getPath(), password);
+                    showAlert(Alert.AlertType.INFORMATION, "성공", "키가 성공적으로 로드되었습니다");
+                    statusLabel.setText("키 로드됨");
                 }
             } catch (Exception e) {
-                showAlert(Alert.AlertType.ERROR, "Error", e.getMessage()); // 오류 알림
+                showAlert(Alert.AlertType.ERROR, "오류", e.getMessage());
             }
         });
     }
-    
-    // 암호화 버튼 클릭 시 호출
+
     @FXML
     private void onEncrypt() {
         if (fileItems.isEmpty()) {
-            showAlert(Alert.AlertType.WARNING, "Warning", "No files selected"); // 파일 없음 경고
+            showAlert(Alert.AlertType.WARNING, "경고", "선택된 파일이 없습니다");
             return;
         }
-        
-        Task<Void> task = new Task<>() {                  // 암호화 작업 태스크 생성
+
+        Task<Void> task = new Task<>() {
             @Override
             protected Void call() throws Exception {
                 int total = fileItems.size();
                 for (int i = 0; i < total; i++) {
                     FileItem item = fileItems.get(i);
-                    File file = new File(currentDirectory, item.getName()); // 암호화할 파일
-                    
-                    updateProgress(i, total);             // 진행률 업데이트
-                    updateMessage("Encrypting: " + item.getName()); // 진행 메시지 업데이트
-                    
-                    int chunkSize = parseChunkSize(chunkSizeCombo.getValue()); // 청크 크기 파싱
-                    efs.encryptFile(file.getPath(), chunkSize); // 파일 암호화
-                    
-                    Platform.runLater(() -> {             // UI 스레드에서 상태 업데이트
-                        item.setStatus("Encrypted");
+                    File file = new File(currentDirectory, item.getName());
+
+                    updateProgress(i, total);
+                    updateMessage("암호화 중: " + item.getName());
+
+                    int chunkSize = parseChunkSize(chunkSizeCombo.getValue());
+                    efs.encryptFile(file.getPath(), chunkSize);
+
+                    Platform.runLater(() -> {
+                        item.setStatus("암호화됨");
                         fileTable.refresh();
                     });
                 }
                 return null;
             }
         };
-        
-        progressBar.progressProperty().bind(task.progressProperty()); // 진행 바 바인딩
-        progressLabel.textProperty().bind(task.messageProperty());    // 진행 메시지 바인딩
-        
-        task.setOnSucceeded(e -> {                    // 태스크 성공 시
+
+        progressBar.progressProperty().bind(task.progressProperty());
+        progressLabel.textProperty().bind(task.messageProperty());
+
+        task.setOnSucceeded(e -> {
             progressBar.progressProperty().unbind();
             progressLabel.textProperty().unbind();
             progressBar.setProgress(1);
-            progressLabel.setText("Encryption complete"); // 완료 메시지
-            updateFileList();                         // 파일 리스트 갱신
+            progressLabel.setText("암호화 완료");
+            updateFileList();
         });
-        
-        task.setOnFailed(e -> {                       // 태스크 실패 시
+
+        task.setOnFailed(e -> {
             progressBar.progressProperty().unbind();
             progressLabel.textProperty().unbind();
-            showAlert(Alert.AlertType.ERROR, "Error", task.getException().getMessage()); // 오류 알림
+            showAlert(Alert.AlertType.ERROR, "오류", task.getException().getMessage());
         });
-        
-        new Thread(task).start();                     // 태스크 실행
+
+        new Thread(task).start();
     }
-    
-    // 복호화 버튼 클릭 시 호출
+
     @FXML
     private void onDecrypt() {
         List<FileItem> encryptedFiles = fileItems.filtered(item -> 
-            item.getName().endsWith(".lock"));        // 암호화된 파일 필터링
-            
+            item.getName().endsWith(".lock"));
+
         if (encryptedFiles.isEmpty()) {
-            showAlert(Alert.AlertType.WARNING, "Warning", "No encrypted files selected"); // 파일 없음 경고
+            showAlert(Alert.AlertType.WARNING, "경고", "선택된 암호화 파일이 없습니다");
             return;
         }
-        
-        Task<Void> task = new Task<>() {              // 복호화 작업 태스크 생성
+
+        Task<Void> task = new Task<>() {
             @Override
             protected Void call() throws Exception {
                 int total = encryptedFiles.size();
                 for (int i = 0; i < total; i++) {
                     FileItem item = encryptedFiles.get(i);
-                    File file = new File(currentDirectory, item.getName()); // 복호화할 파일
-                    
-                    updateProgress(i, total);             // 진행률 업데이트
-                    updateMessage("Decrypting: " + item.getName()); // 진행 메시지 업데이트
-                    
-                    efs.decryptFile(file.getPath());      // 파일 복호화
-                    
-                    Platform.runLater(() -> {             // UI 스레드에서 상태 업데이트
-                        item.setStatus("Decrypted");
+                    File file = new File(currentDirectory, item.getName());
+
+                    updateProgress(i, total);
+                    updateMessage("복호화 중: " + item.getName());
+
+                    efs.decryptFile(file.getPath());
+
+                    Platform.runLater(() -> {
+                        item.setStatus("복호화됨");
                         fileTable.refresh();
                     });
                 }
                 return null;
             }
         };
-        
-        progressBar.progressProperty().bind(task.progressProperty()); // 진행 바 바인딩
-        progressLabel.textProperty().bind(task.messageProperty());    // 진행 메시지 바인딩
-        
-        task.setOnSucceeded(e -> {                    // 태스크 성공 시
+
+        progressBar.progressProperty().bind(task.progressProperty());
+        progressLabel.textProperty().bind(task.messageProperty());
+
+        task.setOnSucceeded(e -> {
             progressBar.progressProperty().unbind();
             progressLabel.textProperty().unbind();
             progressBar.setProgress(1);
-            progressLabel.setText("Decryption complete"); // 완료 메시지
-            updateFileList();                         // 파일 리스트 갱신
+            progressLabel.setText("복호화 완료");
+            updateFileList();
         });
-        
-        task.setOnFailed(e -> {                       // 태스크 실패 시
+
+        task.setOnFailed(e -> {
             progressBar.progressProperty().unbind();
             progressLabel.textProperty().unbind();
-            showAlert(Alert.AlertType.ERROR, "Error", task.getException().getMessage()); // 오류 알림
+            showAlert(Alert.AlertType.ERROR, "오류", task.getException().getMessage());
         });
-        
-        new Thread(task).start();                     // 태스크 실행
+
+        new Thread(task).start();
     }
-    
-    // 파일 리스트를 갱신하는 메서드
+
+    // 파일 목록 갱신
     private void updateFileList() {
-        fileItems.clear();                            // 기존 리스트 초기화
+        fileItems.clear();
         if (currentDirectory != null && currentDirectory.exists()) {
-            File[] files = currentDirectory.listFiles(); // 디렉토리의 파일 목록 가져오기
+            File[] files = currentDirectory.listFiles();
             if (files != null) {
                 for (File file : files) {
-                    fileItems.add(new FileItem(file));    // 파일 추가
+                    fileItems.add(new FileItem(file));
                 }
             }
         }
     }
-    
-    // 드롭된 파일을 처리하는 메서드
+
+    // 드롭된 파일 처리
     private void handleFileDrop(List<File> files) {
         for (File file : files) {
-            fileItems.add(new FileItem(file));        // 드롭된 파일 리스트에 추가
+            fileItems.add(new FileItem(file));
         }
     }
-    
-    // 청크 크기를 파싱하여 바이트 단위로 변환
+
+    // 청크 크기 파싱
     private int parseChunkSize(String sizeStr) {
-        String[] parts = sizeStr.split(" ");          // 크기와 단위 분리
-        int size = Integer.parseInt(parts[0]);        // 숫자 파싱
+        String[] parts = sizeStr.split(" ");
+        int size = Integer.parseInt(parts[0]);
         if (parts[1].equals("GB")) {
-            size *= 1024;                            // GB 단위면 MB로 변환
+            size *= 1024;
         }
-        return size * 1024 * 1024;                    // 바이트 단위로 변환
+        return size * 1024 * 1024;
     }
-    
-    // 알림창을 표시하는 메서드
+
+    // 알림창 표시
     private void showAlert(Alert.AlertType type, String title, String content) {
-        Alert alert = new Alert(type);                // 알림 객체 생성
-        alert.setTitle(title);                        // 제목 설정
-        alert.setContentText(content);                // 내용 설정
-        alert.showAndWait();                          // 알림 표시 및 대기
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setContentText(content);
+        alert.showAndWait();
     }
 }

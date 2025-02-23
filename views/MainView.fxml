@@ -10,33 +10,33 @@
       styleClass="modern-container" spacing="10">
 
     <MenuBar styleClass="modern-menu">
-        <Menu text="File">
-            <MenuItem text="Open Folder" onAction="#onOpenFolder">
+        <Menu text="파일">
+            <MenuItem text="폴더 열기" onAction="#onOpenFolder">
                 <graphic>
                     <FontIcon iconLiteral="fas-folder-open" />
                 </graphic>
             </MenuItem>
             <SeparatorMenuItem />
-            <MenuItem text="Exit" onAction="#onExit">
+            <MenuItem text="종료" onAction="#onExit">
                 <graphic>
                     <FontIcon iconLiteral="fas-sign-out-alt" />
                 </graphic>
             </MenuItem>
         </Menu>
-        <Menu text="Key">
-            <MenuItem text="Create New Key" onAction="#onCreateKey">
+        <Menu text="키">
+            <MenuItem text="새 키 생성" onAction="#onCreateKey">
                 <graphic>
                     <FontIcon iconLiteral="fas-key" />
                 </graphic>
             </MenuItem>
-            <MenuItem text="Load Key" onAction="#onLoadKey">
+            <MenuItem text="키 로드" onAction="#onLoadKey">
                 <graphic>
                     <FontIcon iconLiteral="fas-upload" />
                 </graphic>
             </MenuItem>
         </Menu>
-        <Menu text="Help">
-            <MenuItem text="About">
+        <Menu text="도움말">
+            <MenuItem text="정보">
                 <graphic>
                     <FontIcon iconLiteral="fas-info-circle" />
                 </graphic>
@@ -55,7 +55,7 @@
                     <FontIcon iconLiteral="fas-folder-open" />
                 </graphic>
                 <tooltip>
-                    <Tooltip text="Open Folder" />
+                    <Tooltip text="폴더 열기" />
                 </tooltip>
             </Button>
 
@@ -69,7 +69,7 @@
                     </HBox>
                 </graphic>
                 <tooltip>
-                    <Tooltip text="Create New Key" />
+                    <Tooltip text="새 키 생성" />
                 </tooltip>
             </Button>
 
@@ -81,38 +81,38 @@
                     </HBox>
                 </graphic>
                 <tooltip>
-                    <Tooltip text="Load Key" />
+                    <Tooltip text="키 로드" />
                 </tooltip>
             </Button>
 
             <Separator orientation="VERTICAL" />
 
-            <Label text="Chunk Size:" />
+            <Label text="청크 크기:" />
             <ComboBox fx:id="chunkSizeCombo" />
 
             <Region HBox.hgrow="ALWAYS" />
 
-            <Button onAction="#onEncrypt" styleClass="action-button, encrypt-button">
+            <Button fx:id="encryptButton" onAction="#onEncrypt" styleClass="action-button, encrypt-button">
                 <graphic>
                     <HBox spacing="5" alignment="CENTER">
                         <FontIcon iconLiteral="fas-lock" />
-                        <Label text="Encrypt" styleClass="button-label" />
+                        <Label text="암호화" styleClass="button-label" />
                     </HBox>
                 </graphic>
             </Button>
 
-            <Button onAction="#onDecrypt" styleClass="action-button, decrypt-button">
+            <Button fx:id="decryptButton" onAction="#onDecrypt" styleClass="action-button, decrypt-button">
                 <graphic>
                     <HBox spacing="5" alignment="CENTER">
                         <FontIcon iconLiteral="fas-unlock" />
-                        <Label text="Decrypt" styleClass="button-label" />
+                        <Label text="복호화" styleClass="button-label" />
                     </HBox>
                 </graphic>
             </Button>
         </HBox>
 
         <VBox styleClass="status-container" spacing="5">
-            <Label fx:id="statusLabel" text="Key Status: No key loaded">
+            <Label fx:id="statusLabel" text="키 상태: 키가 로드되지 않음">
                 <graphic>
                     <FontIcon iconLiteral="fas-key" />
                 </graphic>
@@ -121,13 +121,13 @@
 
         <TableView fx:id="fileTable" VBox.vgrow="ALWAYS" styleClass="file-table">
             <placeholder>
-                <Label text="No files in current directory" />
+                <Label text="현재 디렉토리에 파일이 없습니다" />
             </placeholder>
         </TableView>
 
         <VBox spacing="5" styleClass="progress-container">
             <ProgressBar fx:id="progressBar" progress="0.0" />
-            <Label fx:id="progressLabel" text="Ready" />
+            <Label fx:id="progressLabel" text="준비" />
         </VBox>
     </VBox>
 
@@ -135,7 +135,9 @@
         <padding>
             <Insets top="5" right="10" bottom="5" left="10"/>
         </padding>
-        <Label fx:id="itemCountLabel" text="Ready - 0 items" />
+        <Label fx:id="itemCountLabel" text="준비 - 0 항목" />
+        <Region HBox.hgrow="ALWAYS" />
+        <Label fx:id="memoryLabel" text="메모리: 초기화 중..." />
     </HBox>
 
 </VBox>
