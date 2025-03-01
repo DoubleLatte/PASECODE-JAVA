@@ -7,11 +7,11 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 public class ModernEncryptionApp extends Application {
+    private static final String VERSION = "1.0.0"; // 버전 정보 추가
     private ModernEncryptionController controller;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        // FXML 파일 로드
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/MainView.fxml"));
         Parent root = loader.load();
         controller = loader.getController();
@@ -19,12 +19,11 @@ public class ModernEncryptionApp extends Application {
         Scene scene = new Scene(root);
         scene.getStylesheets().add(getClass().getResource("/styles/modern.css").toExternalForm());
 
-        primaryStage.setTitle("PASSCODE");
+        primaryStage.setTitle("PASSCODE v" + VERSION); // 타이틀에 버전 추가
         primaryStage.setScene(scene);
         primaryStage.show();
     }
 
-    // 애플리케이션 종료 시 리소스 정리
     @Override
     public void stop() {
         if (controller != null) {
@@ -32,7 +31,11 @@ public class ModernEncryptionApp extends Application {
         }
     }
 
+    public static String getVersion() {
+        return VERSION;
+    }
+
     public static void main(String[] args) {
-        launch(args); // JavaFX 애플리케이션 실행
+        launch(args);
     }
 }
