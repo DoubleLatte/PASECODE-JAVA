@@ -126,6 +126,7 @@
         </TableView>
 
         <VBox spacing="5" styleClass="progress-container">
+            <Button text="취소" onAction="#cancelTask" styleClass="action-button" />
             <ProgressBar fx:id="progressBar" progress="0.0" />
             <Label fx:id="progressLabel" text="준비" />
         </VBox>
