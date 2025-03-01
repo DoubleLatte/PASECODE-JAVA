@@ -259,6 +259,9 @@ public class ModernEncryptionController {
                             } else {
                                 showAlert(Alert.AlertType.ERROR, "검증 실패", item.getName() + "의 무결성 검증 실패");
                             }
+                        } catch (AccessDeniedException e) {
+                            Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "권한 오류", 
+                                item.getName() + "에 대한 접근 권한이 없습니다."));
                         } catch (Exception e) {
                             Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "오류", e.getMessage()));
                         }
@@ -267,7 +270,13 @@ public class ModernEncryptionController {
                 } else {
                     File zipFile = new File(currentDirectory, "encrypted_bundle.zip");
                     File tempDecryptedZip = new File(currentDirectory, "temp_encrypted_bundle.zip");
-                    zipFiles(selectedItems, zipFile);
+                    try {
+                        zipFiles(selectedItems, zipFile);
+                    } catch (AccessDeniedException e) {
+                        Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "권한 오류", 
+                            "압축 중 접근 권한이 없는 파일이 있습니다."));
+                        return; // 압축 실패 시 작업 중단
+                    }
                     Future<?> future = executor.submit(() -> {
                         try {
                             updateProgress(0.5, 1);
@@ -288,6 +297,9 @@ public class ModernEncryptionController {
                             } else {
                                 showAlert(Alert.AlertType.ERROR, "검증 실패", "압축 파일의 무결성 검증 실패");
                             }
+                        } catch (AccessDeniedException e) {
+                            Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "권한 오류", 
+                                zipFile.getName() + "에 대한 접근 권한이 없습니다."));
                         } catch (Exception e) {
                             Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "오류", e.getMessage()));
                         }
@@ -367,6 +379,9 @@ public class ModernEncryptionController {
                                 item.setStatus("복호화 및 해제 완료");
                                 fileTable.refresh();
                             });
+                        } catch (AccessDeniedException e) {
+                            Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "권한 오류", 
+                                item.getName() + "에 대한 접근 권한이 없습니다."));
                         } catch (Exception e) {
                             Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "오류", e.getMessage()));
                         }
@@ -404,6 +419,18 @@ public class ModernEncryptionController {
         });
 
         new Thread(currentTask).start();
+    }
+
+    private void zipFiles(ObservableList<FileItem> items, File zipFile) throws IOException {
+        try (FileOutputStream fos = new FileOutputStream(zipFile);
+             ZipOutputStream zos = new ZipOutputStream(fos)) {
+            for (FileItem item : items) {
+                File file = new File(currentDirectory, item.getName());
+                addToZip(file, zos, "");
+            }
+        } catch (AccessDeniedException e) {
+            throw new AccessDeniedException("파일 접근 권한 부족: " + zipFile.getName());
+        }
     }
 
     @FXML
@@ -462,16 +489,6 @@ public class ModernEncryptionController {
         alert.setTitle(title);
         alert.setContentText(content);
         alert.showAndWait();
-    }
-
-    private void zipFiles(ObservableList<FileItem> items, File zipFile) throws IOException {
-        try (FileOutputStream fos = new FileOutputStream(zipFile);
-             ZipOutputStream zos = new ZipOutputStream(fos)) {
-            for (FileItem item : items) {
-                File file = new File(currentDirectory, item.getName());
-                addToZip(file, zos, "");
-            }
-        }
     }
 
     private void addToZip(File file, ZipOutputStream zos, String parentPath) throws IOException {
