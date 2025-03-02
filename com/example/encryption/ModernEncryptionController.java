@@ -687,27 +687,92 @@ public class ModernEncryptionController {
         Dialog<Void> dialog = new Dialog<>();
         dialog.setTitle("PASSCODE 정보");
         dialog.setHeaderText("프로그램 정보");
-
-        TextArea infoText = new TextArea();
-        infoText.setEditable(false);
-        infoText.setText(
-            "PASSCODE v" + ModernEncryptionApp.getVersion() + "\n\n" +
+        
+        // 메인 레이아웃 (수직 분할)
+        VBox mainLayout = new VBox(10);
+        mainLayout.setPadding(new Insets(10));
+        
+        // 상단 부분: 이미지와 기본 정보를 수평으로 배치
+        HBox topSection = new HBox(15);
+        
+        // 이미지 로드 (이미지 파일 경로는 실제 파일 위치로 수정하세요)
+        ImageView logoView = new ImageView();
+        try {
+            Image logo = new Image(getClass().getResourceAsStream("/images/logo.png"));
+            logoView.setImage(logo);
+            logoView.setFitHeight(120);
+            logoView.setPreserveRatio(true);
+        } catch (Exception e) {
+            // 이미지 로드 실패 시 대체 텍스트 표시
+            Label imgError = new Label("로고 이미지를 불러올 수 없습니다");
+            topSection.getChildren().add(imgError);
+        }
+        
+        // 기본 정보 텍스트
+        VBox infoBox = new VBox(5);
+        Label titleLabel = new Label("PASSCODE v" + ModernEncryptionApp.getVersion());
+        titleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+        Label devLabel = new Label("개발자: DDLATTE");
+        devLabel.setStyle("-fx-font-style: italic;");
+        
+        infoBox.getChildren().addAll(titleLabel, devLabel);
+        
+        // 이미지와 기본 정보를 상단 섹션에 추가
+        topSection.getChildren().addAll(logoView, infoBox);
+        
+        // 사용법 및 이용 약관 텍스트 영역
+        TextArea textArea = new TextArea(
             "사용법:\n" +
             "1. '폴더 열기'를 통해 폴더를 선택하세요.\n" +
             "2. '새 키 생성' 또는 '키 로드'를 통해 암호화 키를 설정하세요.\n" +
             "3. '암호화' 버튼으로 파일/폴더를 암호화하거나, '복호화' 버튼으로 복원하세요.\n\n" +
+            "이용 약관:\n" +
+            "이 프로그램은 '있는 그대로' 제공되며, 명시적이거나 묵시적인 어떠한 보증도 제공하지 않습니다. " +
+            "개발자 DDLATTE는 이 프로그램의 사용으로 인한 데이터 손실, 손상 또는 기타 문제에 대해 책임을 지지 않습니다. " +
+            "암호화된 파일의 키를 분실할 경우 복구가 불가능할 수 있으므로, 반드시 키를 안전한 곳에 백업하시기 바랍니다. " +
+            "중요한 데이터는 암호화 전에 별도로 백업하는 것을 권장합니다. " +
+            "사용자는 본 프로그램을 사용함으로써 이러한 조건에 동의한 것으로 간주됩니다."
+        );
+        textArea.setEditable(false);
+        textArea.setWrapText(true);
+        textArea.setPrefHeight(200);
+        
+        // 모든 요소를 메인 레이아웃에 추가
+        mainLayout.getChildren().addAll(topSection, textArea);
+        
+        dialog.getDialogPane().setContent(mainLayout);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.OK);
+        dialog.getDialogPane().setPrefWidth(450);
+        
+        try {
+            dialog.showAndWait();
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.ERROR, "정보 표시 오류", "정보 다이얼로그 표시 실패: " + e.getMessage());
+        }
+    }
+
+    
+    @FXML
+    private void showLibrary() {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("사용된 라이브러리");
+        dialog.setHeaderText("PASSCODE에서 사용된 라이브러리");
+    
+        TextArea libraryText = new TextArea();
+        libraryText.setEditable(false);
+        libraryText.setText(
             "사용된 라이브러리:\n" +
             "- JavaFX: UI 구현\n" +
             "- Ikonli: 아이콘 제공\n" +
             "- Java Cryptography Architecture (JCA): 암호화/복호화\n"
         );
-
-        dialog.getDialogPane().setContent(infoText);
+    
+        dialog.getDialogPane().setContent(libraryText);
         dialog.getDialogPane().getButtonTypes().add(ButtonType.OK);
         try {
             dialog.showAndWait();
         } catch (Exception e) {
-            showAlert(Alert.AlertType.ERROR, "정보 표시 오류", "정보 다이얼로그 표시 실패: " + e.getMessage());
+            showAlert(Alert.AlertType.ERROR, "라이브러리 표시 오류", "라이브러리 다이얼로그 표시 실패: " + e.getMessage());
         }
     }
 
