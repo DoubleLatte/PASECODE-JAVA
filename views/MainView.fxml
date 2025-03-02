@@ -41,6 +41,11 @@
                     <FontIcon iconLiteral="fas-info-circle" />
                 </graphic>
             </MenuItem>
+            <MenuItem text="라이브러리" onAction="#Showlibrary">
+                <graphic>
+                    <FontIcon iconLiteral="fa-code" />
+                </graphic>
+            </MenuItem>
         </Menu>
     </MenuBar>
 
