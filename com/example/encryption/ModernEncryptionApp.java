@@ -7,7 +7,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 public class ModernEncryptionApp extends Application {
-    private static final String VERSION = "1.0.0-alpha"; // 버전 정보에 alpha 추가
+    private static final String VERSION = "1.0.0-alpha";
     private ModernEncryptionController controller;
 
     @Override
@@ -19,7 +19,7 @@ public class ModernEncryptionApp extends Application {
         Scene scene = new Scene(root);
         scene.getStylesheets().add(getClass().getResource("/styles/modern.css").toExternalForm());
 
-        primaryStage.setTitle("PASSCODE v" + VERSION); // 타이틀에 버전 반영
+        primaryStage.setTitle("PASSCODE v" + VERSION);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
