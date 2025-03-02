@@ -11,15 +11,16 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.input.TransferMode;
 import org.kordamp.ikonli.javafx.FontIcon;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipException;
 import java.nio.file.AccessDeniedException;
 
 public class ModernEncryptionController {
@@ -45,20 +46,28 @@ public class ModernEncryptionController {
         efs = new EncryptedFileSystem();
         fileItems = FXCollections.synchronizedObservableList(FXCollections.observableArrayList());
 
-        setupUI();
-        setupTableColumns();
-        setupChunkSizeCombo();
-        setupDragAndDrop();
-        setupMemoryMonitoring();
-        setupThemes();
-        fileTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        loadSettings();
+        try {
+            setupUI();
+            Platform.runLater(this::setupTableColumns);
+            setupChunkSizeCombo();
+            setupMemoryMonitoring();
+            setupThemes();
+            fileTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+            loadSettings();
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.ERROR, "초기화 오류", "UI 로드 실패: " + e.getMessage());
+            Platform.exit();
+        }
     }
 
     private void setupUI() {
         fileTable.setItems(fileItems);
-        encryptButton.setGraphic(new FontIcon("fas-lock"));
-        decryptButton.setGraphic(new FontIcon("fas-unlock"));
+        try {
+            encryptButton.setGraphic(new FontIcon("fas-lock"));
+            decryptButton.setGraphic(new FontIcon("fas-unlock"));
+        } catch (IllegalArgumentException e) {
+            showAlert(Alert.AlertType.WARNING, "아이콘 오류", "아이콘 로드 실패: " + e.getMessage());
+        }
         progressBar.setProgress(0);
         progressLabel.setText("준비");
         memoryLabel.setText("메모리: 초기화 중...");
@@ -82,20 +91,6 @@ public class ModernEncryptionController {
         chunkSizeCombo.setValue("32 MB");
     }
 
-    private void setupDragAndDrop() {
-        fileTable.setOnDragOver(event -> {
-            if (event.getDragboard().hasFiles()) {
-                event.acceptTransferModes(TransferMode.COPY);
-            }
-            event.consume();
-        });
-        fileTable.setOnDragDropped(event -> {
-            List<File> files = event.getDragboard().getFiles();
-            handleFileDrop(files);
-            event.consume();
-        });
-    }
-
     private void setupMemoryMonitoring() {
         executorService = Executors.newSingleThreadScheduledExecutor();
         executorService.scheduleAtFixedRate(() -> {
@@ -110,15 +105,30 @@ public class ModernEncryptionController {
 
     private void setupThemes() {
         MenuItem darkTheme = new MenuItem("다크 테마");
-        darkTheme.setOnAction(e -> fileTable.getScene().getStylesheets().setAll(getClass().getResource("/styles/dark.css").toExternalForm()));
+        darkTheme.setOnAction(e -> {
+            try {
+                fileTable.getScene().getStylesheets().setAll(getClass().getResource("/styles/dark.css").toExternalForm());
+            } catch (Exception ex) {
+                showAlert(Alert.AlertType.ERROR, "테마 오류", "다크 테마 로드 실패: " + ex.getMessage());
+            }
+        });
         MenuItem lightTheme = new MenuItem("라이트 테마");
-        lightTheme.setOnAction(e -> fileTable.getScene().getStylesheets().setAll(getClass().getResource("/styles/modern.css").toExternalForm()));
+        lightTheme.setOnAction(e -> {
+            try {
+                fileTable.getScene().getStylesheets().setAll(getClass().getResource("/styles/modern.css").toExternalForm());
+            } catch (Exception ex) {
+                showAlert(Alert.AlertType.ERROR, "테마 오류", "라이트 테마 로드 실패: " + ex.getMessage());
+            }
+        });
         themeMenu.getItems().addAll(darkTheme, lightTheme);
     }
 
     public void shutdown() {
         if (executorService != null && !executorService.isShutdown()) {
-            executorService.shutdown();
+            executorService.shutdownNow();
+            if (!executorService.isShutdown()) {
+                showAlert(Alert.AlertType.WARNING, "종료 경고", "메모리 모니터링 종료 실패");
+            }
         }
     }
 
@@ -126,10 +136,14 @@ public class ModernEncryptionController {
     private void onOpenFolder() {
         DirectoryChooser chooser = new DirectoryChooser();
         chooser.setTitle("폴더 선택");
-        File directory = chooser.showDialog(null);
-        if (directory != null) {
-            currentDirectory = directory;
-            updateFileList();
+        try {
+            File directory = chooser.showDialog(null);
+            if (directory != null) {
+                currentDirectory = directory;
+                updateFileList();
+            }
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.ERROR, "폴더 선택 오류", "디렉토리 선택 실패: " + e.getMessage());
         }
     }
 
@@ -162,23 +176,25 @@ public class ModernEncryptionController {
             return null;
         });
 
-        dialog.showAndWait().ifPresent(password -> {
-            try {
-                FileChooser keyChooser = new FileChooser();
-                keyChooser.setTitle("키 파일 저장");
-                keyChooser.setInitialFileName("mykey.key");
-                keyChooser.setInitialDirectory(new File(System.getProperty("user.home")));
-                keyChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Encryption Key (*.key)", "*.key"));
-                File keyFile = keyChooser.showSaveDialog(fileTable.getScene().getWindow());
-                if (keyFile != null) {
-                    efs.generateKey(keyFile.getPath(), password);
+        Optional<String> result = dialog.showAndWait();
+        if (result.isPresent()) {
+            String pwd = result.get();
+            FileChooser keyChooser = new FileChooser();
+            keyChooser.setTitle("키 파일 저장");
+            keyChooser.setInitialFileName("mykey.key");
+            keyChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+            keyChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Encryption Key (*.key)", "*.key"));
+            File keyFile = keyChooser.showSaveDialog(fileTable.getScene().getWindow());
+            if (keyFile != null) {
+                try {
+                    efs.generateKey(keyFile.getPath(), pwd);
                     showAlert(Alert.AlertType.INFORMATION, "성공", "키가 성공적으로 생성되었습니다");
                     statusLabel.setText("키 로드됨: " + keyFile.getPath());
+                } catch (Exception e) {
+                    showAlert(Alert.AlertType.ERROR, "오류", e.getMessage());
                 }
-            } catch (Exception e) {
-                showAlert(Alert.AlertType.ERROR, "오류", e.getMessage());
             }
-        });
+        }
     }
 
     @FXML
@@ -198,27 +214,23 @@ public class ModernEncryptionController {
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == ButtonType.OK) {
-                return password.getText();
-            }
-            return null;
-        });
+        dialog.setResultConverter(dialogButton -> dialogButton == ButtonType.OK ? password.getText() : null);
 
-        dialog.showAndWait().ifPresent(password -> {
+        Optional<String> result = dialog.showAndWait();
+        if (result.isPresent()) {
             try {
                 FileChooser chooser = new FileChooser();
                 chooser.setTitle("키 파일 선택");
                 File keyFile = chooser.showOpenDialog(null);
                 if (keyFile != null) {
-                    efs.loadKey(keyFile.getPath(), password);
+                    efs.loadKey(keyFile.getPath(), result.get());
                     showAlert(Alert.AlertType.INFORMATION, "성공", "키가 성공적으로 로드되었습니다");
                     statusLabel.setText("키 로드됨: " + keyFile.getPath());
                 }
             } catch (Exception e) {
                 showAlert(Alert.AlertType.ERROR, "오류", e.getMessage());
             }
-        });
+        }
     }
 
     @FXML
@@ -235,7 +247,13 @@ public class ModernEncryptionController {
         Optional<ButtonType> result = confirm.showAndWait();
         if (result.isEmpty() || result.get() != ButtonType.OK) return;
 
-        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        ExecutorService executor;
+        try {
+            executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.ERROR, "스레드 오류", "작업 스레드 생성 실패: " + e.getMessage());
+            return;
+        }
         List<Future<?>> futures = new ArrayList<>();
 
         currentTask = new Task<>() {
@@ -246,7 +264,12 @@ public class ModernEncryptionController {
                     FileItem item = selectedItems.get(0);
                     File file = new File(currentDirectory, item.getName());
                     File backupFile = new File(file.getPath() + ".backup");
-                    Files.copy(file.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    try {
+                        Files.copy(file.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException e) {
+                        showAlert(Alert.AlertType.ERROR, "백업 오류", "백업 생성 실패: " + e.getMessage());
+                        return null;
+                    }
 
                     File tempDecrypted = null;
                     try {
@@ -254,7 +277,13 @@ public class ModernEncryptionController {
                         Future<?> future = executor.submit(() -> {
                             try {
                                 updateMessage("암호화 중: " + item.getName());
-                                int chunkSize = parseChunkSize(chunkSizeCombo.getValue());
+                                int chunkSize;
+                                try {
+                                    chunkSize = parseChunkSize(chunkSizeCombo.getValue());
+                                } catch (NumberFormatException e) {
+                                    chunkSize = 32 * 1024 * 1024; // 기본값 32MB
+                                    Platform.runLater(() -> showAlert(Alert.AlertType.WARNING, "청크 오류", "청크 크기 형식이 잘못됨, 기본값 32MB 사용"));
+                                }
                                 String encryptedPath = efs.encryptFile(file.getPath(), chunkSize);
                                 String decryptedPath = efs.decryptFile(encryptedPath, tempDecrypted.getPath());
                                 String originalHash = calculateFileHash(file);
@@ -274,8 +303,7 @@ public class ModernEncryptionController {
                                     throw new Exception("무결성 검증 실패: " + item.getName());
                                 }
                             } catch (AccessDeniedException e) {
-                                Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "권한 오류",
-                                    item.getName() + "에 대한 접근 권한이 없습니다."));
+                                Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "권한 오류", item.getName() + "에 대한 접근 권한이 없습니다"));
                             } catch (Exception e) {
                                 Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "오류", e.getMessage()));
                             }
@@ -295,16 +323,24 @@ public class ModernEncryptionController {
                         zipFiles(selectedItems, zipFile);
                         Files.copy(zipFile.toPath(), backupZip.toPath(), StandardCopyOption.REPLACE_EXISTING);
                     } catch (AccessDeniedException e) {
-                        Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "권한 오류",
-                            "압축 중 접근 권한이 없는 파일이 있습니다."));
-                        return;
+                        Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "권한 오류", "압축 중 접근 권한이 없는 파일이 있습니다"));
+                        return null;
+                    } catch (IOException e) {
+                        Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "백업 오류", "압축 파일 백업 실패: " + e.getMessage()));
+                        return null;
                     }
 
                     Future<?> future = executor.submit(() -> {
                         try {
                             updateProgress(0.5, 1);
                             updateMessage("암호화 중: " + zipFile.getName());
-                            int chunkSize = parseChunkSize(chunkSizeCombo.getValue());
+                            int chunkSize;
+                            try {
+                                chunkSize = parseChunkSize(chunkSizeCombo.getValue());
+                            } catch (NumberFormatException e) {
+                                chunkSize = 32 * 1024 * 1024; // 기본값 32MB
+                                Platform.runLater(() -> showAlert(Alert.AlertType.WARNING, "청크 오류", "청크 크기 형식이 잘못됨, 기본값 32MB 사용"));
+                            }
                             String encryptedPath = efs.encryptFile(zipFile.getPath(), chunkSize);
                             String decryptedPath = efs.decryptFile(encryptedPath, tempDecryptedZip.getPath());
                             String originalHash = calculateFileHash(zipFile);
@@ -329,8 +365,7 @@ public class ModernEncryptionController {
                                 throw new Exception("압축 파일 무결성 검증 실패");
                             }
                         } catch (AccessDeniedException e) {
-                            Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "권한 오류",
-                                zipFile.getName() + "에 대한 접근 권한이 없습니다."));
+                            Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "권한 오류", zipFile.getName() + "에 대한 접근 권한이 없습니다"));
                         } catch (Exception e) {
                             Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "오류", e.getMessage()));
                         }
@@ -341,8 +376,7 @@ public class ModernEncryptionController {
                 for (Future<?> future : futures) {
                     future.get();
                 }
-                executor.shutdown();
-                executor.awaitTermination(1, TimeUnit.HOURS);
+                executor.shutdownNow();
 
                 updateProgress(1, 1);
                 updateMessage("암호화 완료 (100%)");
@@ -386,7 +420,13 @@ public class ModernEncryptionController {
         Optional<ButtonType> result = confirm.showAndWait();
         if (result.isEmpty() || result.get() != ButtonType.OK) return;
 
-        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        ExecutorService executor;
+        try {
+            executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.ERROR, "스레드 오류", "작업 스레드 생성 실패: " + e.getMessage());
+            return;
+        }
         List<Future<?>> futures = new ArrayList<>();
 
         currentTask = new Task<>() {
@@ -396,12 +436,13 @@ public class ModernEncryptionController {
                 for (int i = 0; i < total; i++) {
                     FileItem item = encryptedFiles.get(i);
                     File file = new File(currentDirectory, item.getName());
+                    String outputPath = generateUniqueOutputPath(file.getPath().substring(0, file.getPath().length() - 5));
 
                     Future<?> future = executor.submit(() -> {
                         try {
                             updateProgress(i, total);
                             updateMessage("복호화 중: " + item.getName());
-                            String decryptedPath = efs.decryptFile(file.getPath());
+                            String decryptedPath = efs.decryptFile(file.getPath(), outputPath);
                             File decryptedFile = new File(decryptedPath);
                             if (decryptedFile.getName().endsWith(".zip")) {
                                 unzipFile(decryptedFile, currentDirectory);
@@ -414,8 +455,7 @@ public class ModernEncryptionController {
                                 }
                             });
                         } catch (AccessDeniedException e) {
-                            Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "권한 오류",
-                                item.getName() + "에 대한 접근 권한이 없습니다."));
+                            Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "권한 오류", item.getName() + "에 대한 접근 권한이 없습니다"));
                         } catch (Exception e) {
                             Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "오류", e.getMessage()));
                         }
@@ -426,8 +466,7 @@ public class ModernEncryptionController {
                 for (Future<?> future : futures) {
                     future.get();
                 }
-                executor.shutdown();
-                executor.awaitTermination(1, TimeUnit.HOURS);
+                executor.shutdownNow();
 
                 updateProgress(1, 1);
                 updateMessage("복호화 완료 (100%)");
@@ -464,6 +503,8 @@ public class ModernEncryptionController {
             }
         } catch (AccessDeniedException e) {
             throw new AccessDeniedException("파일 접근 권한 부족: " + zipFile.getName());
+        } catch (IOException e) {
+            throw new IOException("압축 오류: " + e.getMessage());
         }
     }
 
@@ -483,9 +524,12 @@ public class ModernEncryptionController {
     @FXML
     private void cancelTask() {
         if (currentTask != null && currentTask.isRunning()) {
-            currentTask.cancel();
-            progressLabel.setText("작업 취소됨");
-            progressBar.setProgress(0);
+            if (currentTask.cancel()) {
+                progressLabel.setText("작업 취소됨");
+                progressBar.setProgress(0);
+            } else {
+                showAlert(Alert.AlertType.WARNING, "취소 오류", "작업 취소 실패");
+            }
         }
     }
 
@@ -500,37 +544,40 @@ public class ModernEncryptionController {
                     }
                     Platform.runLater(() -> itemCountLabel.setText("항목 수: " + files.length + "개"));
                 } else {
+                    showAlert(Alert.AlertType.ERROR, "목록 오류", "디렉토리 접근 권한 없음 또는 I/O 오류 발생");
                     Platform.runLater(() -> itemCountLabel.setText("항목 수: 0개"));
                 }
             }
         }
     }
 
-    private void handleFileDrop(List<File> files) {
-        synchronized (fileItems) {
-            for (File file : files) {
-                fileItems.add(new FileItem(file));
-            }
-            updateFileList();
+    private int parseChunkSize(String sizeStr) {
+        try {
+            String[] parts = sizeStr.split(" ");
+            int size = Integer.parseInt(parts[0]);
+            if (parts[1].equals("GB")) size *= 1024;
+            return size * 1024 * 1024;
+        } catch (Exception e) {
+            throw new NumberFormatException("청크 크기 파싱 오류: " + e.getMessage());
         }
     }
 
-    private int parseChunkSize(String sizeStr) {
-        String[] parts = sizeStr.split(" ");
-        int size = Integer.parseInt(parts[0]);
-        if (parts[1].equals("GB")) size *= 1024;
-        return size * 1024 * 1024;
-    }
-
     private void showAlert(Alert.AlertType type, String title, String content) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setContentText(content);
-        alert.showAndWait();
+        try {
+            Alert alert = new Alert(type);
+            alert.setTitle(title);
+            alert.setContentText(content);
+            alert.showAndWait();
+        } catch (Exception e) {
+            System.err.println("알림 표시 실패: " + e.getMessage());
+        }
     }
 
     private void addToZip(File file, ZipOutputStream zos, String parentPath) throws IOException {
         String zipEntryName = parentPath + file.getName();
+        if (zipEntryName.length() > 65535) {
+            throw new IllegalArgumentException("ZIP 엔트리 이름이 너무 김: " + zipEntryName);
+        }
         if (file.isDirectory()) {
             zipEntryName += "/";
             zos.putNextEntry(new ZipEntry(zipEntryName));
@@ -561,9 +608,14 @@ public class ModernEncryptionController {
             while ((entry = zis.getNextEntry()) != null) {
                 File newFile = new File(destDir, entry.getName());
                 if (entry.isDirectory()) {
-                    newFile.mkdirs();
+                    if (!newFile.mkdirs()) {
+                        throw new IOException("부모 디렉토리 생성 실패: " + newFile.getPath());
+                    }
                 } else {
-                    newFile.getParentFile().mkdirs();
+                    File parent = newFile.getParentFile();
+                    if (!parent.exists() && !parent.mkdirs()) {
+                        throw new IOException("부모 디렉토리 생성 실패: " + parent.getPath());
+                    }
                     try (FileOutputStream fos = new FileOutputStream(newFile)) {
                         int len;
                         while ((len = zis.read(buffer)) > 0) {
@@ -572,12 +624,19 @@ public class ModernEncryptionController {
                     }
                 }
             }
+        } catch (ZipException e) {
+            throw new IOException("ZIP 파일 손상: " + e.getMessage());
         }
         efs.secureDelete(zipFile.getPath());
     }
 
     private String calculateFileHash(File file) throws Exception {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        MessageDigest digest;
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new Exception("해시 알고리즘 오류: " + e.getMessage());
+        }
         try (FileInputStream fis = new FileInputStream(file)) {
             byte[] buffer = new byte[8192];
             int bytesRead;
@@ -596,17 +655,28 @@ public class ModernEncryptionController {
             props.store(fos, "PASSCODE Settings");
         } catch (IOException e) {
             showAlert(Alert.AlertType.ERROR, "설정 저장 실패", e.getMessage());
+            return;
         }
     }
 
     private void loadSettings() {
         Properties props = new Properties();
-        try (FileInputStream fis = new FileInputStream("settings.properties")) {
+        File settingsFile = new File("settings.properties");
+        try (FileInputStream fis = new FileInputStream(settingsFile)) {
             props.load(fis);
             chunkSizeCombo.setValue(props.getProperty("chunkSize", "32 MB"));
             currentDirectory = new File(props.getProperty("lastDirectory", System.getProperty("user.home")));
             updateFileList();
         } catch (IOException e) {
+            if (!settingsFile.exists()) {
+                try (FileOutputStream fos = new FileOutputStream(settingsFile)) {
+                    props.setProperty("chunkSize", "32 MB");
+                    props.setProperty("lastDirectory", System.getProperty("user.home"));
+                    props.store(fos, "PASSCODE Default Settings");
+                } catch (IOException ex) {
+                    showAlert(Alert.AlertType.ERROR, "기본 설정 생성 실패", ex.getMessage());
+                }
+            }
             currentDirectory = new File(System.getProperty("user.home"));
             updateFileList();
         }
@@ -623,7 +693,7 @@ public class ModernEncryptionController {
         infoText.setText(
             "PASSCODE v" + ModernEncryptionApp.getVersion() + "\n\n" +
             "사용법:\n" +
-            "1. 폴더 또는 파일을 드래그 앤 드롭하거나 '폴더 열기'를 통해 선택하세요.\n" +
+            "1. '폴더 열기'를 통해 폴더를 선택하세요.\n" +
             "2. '새 키 생성' 또는 '키 로드'를 통해 암호화 키를 설정하세요.\n" +
             "3. '암호화' 버튼으로 파일/폴더를 암호화하거나, '복호화' 버튼으로 복원하세요.\n\n" +
             "사용된 라이브러리:\n" +
@@ -634,6 +704,25 @@ public class ModernEncryptionController {
 
         dialog.getDialogPane().setContent(infoText);
         dialog.getDialogPane().getButtonTypes().add(ButtonType.OK);
-        dialog.showAndWait();
+        try {
+            dialog.showAndWait();
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.ERROR, "정보 표시 오류", "정보 다이얼로그 표시 실패: " + e.getMessage());
+        }
+    }
+
+    private String generateUniqueOutputPath(String basePath) {
+        File file = new File(basePath);
+        if (!file.exists()) return basePath;
+        int counter = 1;
+        String newPath;
+        do {
+            newPath = basePath + "-" + counter++;
+            file = new File(newPath);
+            if (counter > 1000) { // 무한 루프 방지
+                throw new RuntimeException("너무 많은 파일 이름 충돌");
+            }
+        } while (file.exists());
+        return newPath;
     }
 }
