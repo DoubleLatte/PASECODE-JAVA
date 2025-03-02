@@ -719,7 +719,7 @@ public class ModernEncryptionController {
         do {
             newPath = basePath + "-" + counter++;
             file = new File(newPath);
-            if (counter > 1000) { // 무한 루프 방지
+            if (counter > 100) { // 무한 루프 방지
                 throw new RuntimeException("너무 많은 파일 이름 충돌");
             }
         } while (file.exists());
