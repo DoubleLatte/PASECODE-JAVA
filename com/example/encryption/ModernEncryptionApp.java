@@ -20,6 +20,7 @@ public class ModernEncryptionApp extends Application {
         scene.getStylesheets().add(getClass().getResource("/styles/modern.css").toExternalForm());
 
         primaryStage.setTitle("PASSCODE v" + VERSION);
+        primaryStage.getIcons().add(new javafx.scene.image.Image(getClass().getResourceAsStream("/icons/favicon.png")));
         primaryStage.setScene(scene);
         primaryStage.show();
     }
